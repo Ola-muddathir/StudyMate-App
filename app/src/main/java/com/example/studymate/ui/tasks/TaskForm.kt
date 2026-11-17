@@ -1,31 +1,47 @@
 package com.example.studymate.ui.tasks
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.studymate.data.Course
+import com.example.studymate.data.Priority
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+private val BackgroundPink = Color(0xFFFAF2F3)
+private val DarkBurgundy = Color(0xFF40232D)
+private val MutedRose = Color(0xFF967A83)
+private val CardWhite = Color(0xFFFFFEFE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskForm(
-    courses: List<Pair<Int, String>>,
+    courses: List<Course>,
     initialTitle: String = "",
     initialDescription: String = "",
     initialCourseId: Int? = null,
     initialDueDate: Long = System.currentTimeMillis(),
-    initialPriority: String = "MEDIUM",
-    onSave: (String, String, Int, Long, String) -> Unit,
+    initialPriority: String = Priority.MEDIUM,
+    errorMessage: String? = null,
+    onInputChange: () -> Unit = {},
+    onSave: (String, String, Int?, Long, String) -> Unit,
     onCancel: () -> Unit
 ) {
-    var title by remember { mutableStateOf(initialTitle) }
-    var description by remember { mutableStateOf(initialDescription) }
-    var selectedCourseId by remember { mutableStateOf(initialCourseId) }
-    var dueDate by remember { mutableLongStateOf(initialDueDate) }
-    var priority by remember { mutableStateOf(initialPriority) }
-    var errorMessage by remember { mutableStateOf("") }
+    var title by remember(initialTitle) { mutableStateOf(initialTitle) }
+    var description by remember(initialDescription) { mutableStateOf(initialDescription) }
+    var selectedCourseId by remember(initialCourseId) { mutableStateOf(initialCourseId) }
+    var dueDate by remember(initialDueDate) { mutableLongStateOf(initialDueDate) }
+    var priority by remember(initialPriority) { mutableStateOf(initialPriority) }
     var showDatePicker by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
 
@@ -33,51 +49,80 @@ fun TaskForm(
         initialSelectedDateMillis = dueDate
     )
 
+    val selectedCourseLabel = courses.firstOrNull { it.courseId == selectedCourseId }
+        ?.let { "${it.courseCode.uppercase()} · ${it.courseName}" }
+        ?: "Select a course"
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(BackgroundPink)
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(horizontal = 22.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = if (initialTitle.isBlank()) "New Task" else "Edit Task",
-            style = MaterialTheme.typography.headlineMedium
+            text = if (initialTitle.isBlank()) "New Task." else "Edit Task.",
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+            color = DarkBurgundy
+        )
+
+        Text(
+            text = "FILL IN ASSIGNMENT DETAILS",
+            fontSize = 10.sp,
+            letterSpacing = 2.5.sp,
+            color = MutedRose
         )
 
         OutlinedTextField(
             value = title,
-            onValueChange = { title = it; errorMessage = "" },
+            onValueChange = {
+                title = it
+                onInputChange()
+            },
             label = { Text("Task Title") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            isError = errorMessage != null && title.isBlank()
         )
 
         OutlinedTextField(
             value = description,
-            onValueChange = { description = it },
-            label = { Text("Description") },
+            onValueChange = {
+                description = it
+                onInputChange()
+            },
+            label = { Text("Description (Optional)") },
             modifier = Modifier.fillMaxWidth(),
-            minLines = 3
+            minLines = 3,
+            shape = RoundedCornerShape(14.dp)
         )
 
-        Text("Course", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "Course",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = DarkBurgundy
+        )
 
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded }
         ) {
             OutlinedTextField(
-                value = courses.firstOrNull { it.first == selectedCourseId }?.second ?: "Select a course",
+                value = selectedCourseLabel,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("Course") },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .menuAnchor()
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
+                isError = errorMessage != null && selectedCourseId == null
             )
 
             ExposedDropdownMenu(
@@ -86,79 +131,97 @@ fun TaskForm(
             ) {
                 courses.forEach { course ->
                     DropdownMenuItem(
-                        text = { Text(course.second) },
+                        text = {
+                            Text("${course.courseCode.uppercase()} · ${course.courseName}")
+                        },
                         onClick = {
-                            selectedCourseId = course.first
+                            selectedCourseId = course.courseId
                             expanded = false
+                            onInputChange()
                         }
                     )
                 }
             }
         }
 
-        Text("Priority", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = "Priority",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = DarkBurgundy
+        )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("LOW", "MEDIUM", "HIGH").forEach { option ->
+            Priority.ALL.forEach { option ->
                 FilterChip(
                     selected = priority == option,
-                    onClick = { priority = option },
-                    label = { Text(option) }
+                    onClick = {
+                        priority = option
+                        onInputChange()
+                    },
+                    label = { Text(option) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = DarkBurgundy,
+                        selectedLabelColor = Color.White,
+                        containerColor = CardWhite,
+                        labelColor = MutedRose
+                    )
                 )
             }
         }
 
-        OutlinedButton(
-            onClick = { showDatePicker = true },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Choose Due Date")
-        }
-
         Text(
-            text = java.text.SimpleDateFormat(
-                "dd MMM yyyy",
-                java.util.Locale.getDefault()
-            ).format(java.util.Date(dueDate))
+            text = "Due Date",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = DarkBurgundy
         )
 
-        if (errorMessage.isNotBlank()) {
+        OutlinedButton(
+            onClick = { showDatePicker = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkBurgundy)
+        ) {
+            val formattedDate = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                .format(Date(dueDate))
+            Text("Selected: $formattedDate  (Change)")
+        }
+
+        if (errorMessage != null) {
             Text(
                 text = errorMessage,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
             )
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
                 onClick = onCancel,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkBurgundy)
             ) {
                 Text("Cancel")
             }
 
             Button(
                 onClick = {
-                    when {
-                        title.isBlank() ->
-                            errorMessage = "Please enter a task title"
-
-                        selectedCourseId == null ->
-                            errorMessage = "Please select a course"
-
-                        courses.none { it.first == selectedCourseId } ->
-                            errorMessage = "Selected course is not available"
-
-                        else -> onSave(
-                            title.trim(),
-                            description.trim(),
-                            selectedCourseId!!,
-                            dueDate,
-                            priority
-                        )
-                    }
+                    onSave(title, description, selectedCourseId, dueDate, priority)
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DarkBurgundy,
+                    contentColor = Color.White
+                )
             ) {
                 Text("Save Task")
             }
@@ -171,18 +234,16 @@ fun TaskForm(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        datePickerState.selectedDateMillis?.let {
-                            dueDate = it
-                        }
+                        datePickerState.selectedDateMillis?.let { dueDate = it }
                         showDatePicker = false
                     }
                 ) {
-                    Text("OK")
+                    Text("OK", color = DarkBurgundy)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = MutedRose)
                 }
             }
         ) {

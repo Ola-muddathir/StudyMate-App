@@ -1,5 +1,6 @@
 package com.example.studymate.ui.tasks
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -17,33 +19,58 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// Temporary UI Model
-data class TaskUiModel(
-    val taskId: Int,
-    val title: String,
-    val description: String,
-    val courseName: String,
-    val dueDate: Long,
-    val priority: String,
-    val isCompleted: Boolean
-)
-
-// Pink Editorial Color Palette
 private val BackgroundPink = Color(0xFFFAF2F3)
 private val DarkBurgundy = Color(0xFF40232D)
-private val RosePink = Color(0xFFE99BAD)
 private val MutedRose = Color(0xFF967A83)
 private val CardWhite = Color(0xFFFFFEFE)
 
 @Composable
 fun TasksScreen(
-    tasks: List<TaskUiModel>,
-    onAddTask: () -> Unit,
-    onEditTask: (TaskUiModel) -> Unit,
-    onDeleteTask: (TaskUiModel) -> Unit,
-    onToggleComplete: (TaskUiModel) -> Unit
+    viewModel: TaskViewModel,
+    onShareTask: ((TaskUiModel) -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val tasks by viewModel.tasks.collectAsState()
+    val courses by viewModel.courses.collectAsState()
+    val formError by viewModel.formError.collectAsState()
+
     var selectedFilter by remember { mutableStateOf("All") }
+    var showForm by remember { mutableStateOf(false) }
+    var selectedTask by remember { mutableStateOf<TaskUiModel?>(null) }
+    var taskToDelete by remember { mutableStateOf<TaskUiModel?>(null) }
+    var showNoCourseAlert by remember { mutableStateOf(false) }
+
+    if (showForm) {
+        TaskForm(
+            courses = courses,
+            initialTitle = selectedTask?.title ?: "",
+            initialDescription = selectedTask?.description ?: "",
+            initialCourseId = selectedTask?.courseId ?: courses.firstOrNull()?.courseId,
+            initialDueDate = selectedTask?.dueDate ?: System.currentTimeMillis(),
+            initialPriority = selectedTask?.priority ?: "MEDIUM",
+            errorMessage = formError,
+            onInputChange = { viewModel.clearFormError() },
+            onSave = { title, description, courseId, dueDate, priority ->
+                viewModel.saveTask(
+                    existingTask = selectedTask,
+                    title = title,
+                    description = description,
+                    courseId = courseId,
+                    dueDate = dueDate,
+                    priority = priority
+                ) {
+                    showForm = false
+                    selectedTask = null
+                }
+            },
+            onCancel = {
+                viewModel.clearFormError()
+                showForm = false
+                selectedTask = null
+            }
+        )
+        return
+    }
 
     val filteredTasks = when (selectedFilter) {
         "Active" -> tasks.filter { !it.isCompleted }
@@ -57,8 +84,6 @@ fun TasksScreen(
             .background(BackgroundPink)
             .padding(horizontal = 22.dp, vertical = 20.dp)
     ) {
-
-        // Header
         Text(
             text = "Study.",
             fontSize = 34.sp,
@@ -83,7 +108,6 @@ fun TasksScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Task Statistics
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -109,7 +133,6 @@ fun TasksScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // Section Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -132,7 +155,6 @@ fun TasksScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Filters
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -153,7 +175,6 @@ fun TasksScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tasks List
         if (filteredTasks.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -178,9 +199,29 @@ fun TasksScreen(
                 ) { task ->
                     TaskCard(
                         task = task,
-                        onEdit = { onEditTask(task) },
-                        onDelete = { onDeleteTask(task) },
-                        onToggleComplete = { onToggleComplete(task) }
+                        onDetails = {
+                            val intent = Intent(context, TaskDetailActivity::class.java).apply {
+                                putExtra("EXTRA_TITLE", task.title)
+                                putExtra("EXTRA_COURSE", task.courseName)
+                                putExtra("EXTRA_DESC", task.description)
+                                putExtra("EXTRA_PRIORITY", task.priority)
+                                putExtra("EXTRA_DUE_DATE", task.dueDate)
+                                putExtra("EXTRA_COMPLETED", task.isCompleted)
+                            }
+                            context.startActivity(intent)
+                        },
+                        onEdit = {
+                            viewModel.clearFormError()
+                            selectedTask = task
+                            showForm = true
+                        },
+                        onDelete = {
+                            taskToDelete = task
+                        },
+                        onToggleComplete = {
+                            viewModel.toggleTaskCompletion(task)
+                        },
+                        onShare = onShareTask?.let { share -> { share(task) } }
                     )
                 }
             }
@@ -188,9 +229,16 @@ fun TasksScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Add Task Button
         Button(
-            onClick = onAddTask,
+            onClick = {
+                if (courses.isEmpty()) {
+                    showNoCourseAlert = true
+                } else {
+                    viewModel.clearFormError()
+                    selectedTask = null
+                    showForm = true
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp),
@@ -205,6 +253,56 @@ fun TasksScreen(
                 color = Color.White
             )
         }
+    }
+
+    taskToDelete?.let { task ->
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = CardWhite,
+            title = { Text("Delete Task", color = DarkBurgundy) },
+            text = {
+                Text(
+                    "Are you sure you want to delete \"${task.title}\"?",
+                    color = MutedRose
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteTask(task)
+                        taskToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = DarkBurgundy)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) {
+                    Text("Cancel", color = MutedRose)
+                }
+            }
+        )
+    }
+
+    if (showNoCourseAlert) {
+        AlertDialog(
+            onDismissRequest = { showNoCourseAlert = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = CardWhite,
+            title = { Text("No Courses Found", color = DarkBurgundy) },
+            text = {
+                Text(
+                    "Please add at least one course in the Courses screen before creating a task.",
+                    color = MutedRose
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showNoCourseAlert = false }) {
+                    Text("OK", color = DarkBurgundy)
+                }
+            }
+        )
     }
 }
 
@@ -246,9 +344,11 @@ private fun StatisticCard(
 @Composable
 private fun TaskCard(
     task: TaskUiModel,
+    onDetails: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onToggleComplete: () -> Unit
+    onToggleComplete: () -> Unit,
+    onShare: (() -> Unit)? = null
 ) {
     val priorityColor = when (task.priority) {
         "HIGH" -> Color(0xFFB65C70)
@@ -269,8 +369,6 @@ private fun TaskCard(
         Column(
             modifier = Modifier.padding(17.dp)
         ) {
-
-            // Priority and Completion
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -302,7 +400,6 @@ private fun TaskCard(
 
             Spacer(modifier = Modifier.height(13.dp))
 
-            // Task Title
             Text(
                 text = task.title,
                 fontSize = 20.sp,
@@ -334,7 +431,6 @@ private fun TaskCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Due Date
             Text(
                 text = "DUE DATE",
                 fontSize = 9.sp,
@@ -355,31 +451,49 @@ private fun TaskCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(
-                    onClick = onToggleComplete
+                    onClick = onToggleComplete,
+                    contentPadding = PaddingValues(horizontal = 6.dp)
                 ) {
                     Text(
-                        text = if (task.isCompleted) {
-                            "Mark incomplete"
-                        } else {
-                            "Complete"
-                        },
+                        text = if (task.isCompleted) "Incomplete" else "Complete",
                         color = DarkBurgundy
                     )
                 }
 
                 Row {
-                    TextButton(onClick = onEdit) {
+                    if (onShare != null) {
+                        TextButton(
+                            onClick = onShare,
+                            contentPadding = PaddingValues(horizontal = 6.dp)
+                        ) {
+                            Text("Share", color = DarkBurgundy)
+                        }
+                    }
+
+                    TextButton(
+                        onClick = onDetails,
+                        contentPadding = PaddingValues(horizontal = 6.dp)
+                    ) {
+                        Text("Details", color = DarkBurgundy)
+                    }
+
+                    TextButton(
+                        onClick = onEdit,
+                        contentPadding = PaddingValues(horizontal = 6.dp)
+                    ) {
                         Text("Edit", color = MutedRose)
                     }
 
-                    TextButton(onClick = onDelete) {
+                    TextButton(
+                        onClick = onDelete,
+                        contentPadding = PaddingValues(horizontal = 6.dp)
+                    ) {
                         Text("Delete", color = Color(0xFFB65C70))
                     }
                 }

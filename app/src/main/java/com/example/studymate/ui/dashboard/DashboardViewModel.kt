@@ -1,6 +1,7 @@
 package com.example.studymate.ui.dashboard
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.studymate.data.TaskDao
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,4 +49,13 @@ class DashboardViewModel(
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = DashboardUiState()
             )
+}
+class DashboardViewModelFactory(
+    private val taskDao: TaskDao
+) : ViewModelProvider.Factory {
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return DashboardViewModel(taskDao) as T
+    }
 }

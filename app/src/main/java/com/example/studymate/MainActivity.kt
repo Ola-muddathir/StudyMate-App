@@ -1,18 +1,24 @@
-
 package com.example.studymate
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.ui.Modifier
-import com.example.studymate.ui.tasks.TasksScreen
+import androidx.lifecycle.ViewModelProvider
+
+import com.example.studymate.data.AppDatabase
 import com.example.studymate.ui.theme.StudyMateTheme
+
+import com.example.studymate.ui.dashboard.DashboardViewModel
+import com.example.studymate.ui.dashboard.DashboardViewModelFactory
+
+import com.example.studymate.ui.courses.CourseViewModel
+import com.example.studymate.ui.courses.CourseViewModelFactory
+
+import com.example.studymate.ui.tasks.TaskViewModel
+import com.example.studymate.ui.tasks.TaskViewModelFactory
+
+import com.example.studymate.ui.StudyMateNavigation
 
 class MainActivity : ComponentActivity() {
 
@@ -20,54 +26,36 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        val database = AppDatabase.getDatabase(applicationContext)
+
+        val dashboardViewModel = ViewModelProvider(
+            this,
+            DashboardViewModelFactory(database.taskDao())
+        )[DashboardViewModel::class.java]
+
+        val courseViewModel = ViewModelProvider(
+            this,
+            CourseViewModelFactory(
+                database.courseDao(),
+                database.taskDao()
+            )
+        )[CourseViewModel::class.java]
+
+        val taskViewModel = ViewModelProvider(
+            this,
+            TaskViewModelFactory(
+                database.taskDao(),
+                database.courseDao()
+            )
+        )[TaskViewModel::class.java]
+
         setContent {
             StudyMateTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
-                        TasksScreen(
-                            tasks = emptyList(),
-
-                            onAddTask = {
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    "Task form will be connected soon",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            },
-
-                            onEditTask = { task ->
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    "Edit: ${task.title}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            },
-
-                            onDeleteTask = { task ->
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    "Delete: ${task.title}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            },
-
-                            onToggleComplete = { task ->
-                                Toast.makeText(
-                                    this@MainActivity,
-                                    "Task: ${task.title}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
-                    }
-                }
+                StudyMateNavigation(
+                    dashboardViewModel = dashboardViewModel,
+                    courseViewModel = courseViewModel,
+                    taskViewModel = taskViewModel
+                )
             }
         }
     }

@@ -1,11 +1,12 @@
+
 package com.example.studymate.ui.tasks
 
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +19,6 @@ import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-private val BackgroundPink = Color(0xFFFAF2F3)
-private val DarkBurgundy = Color(0xFF40232D)
-private val MutedRose = Color(0xFF967A83)
-private val CardWhite = Color(0xFFFFFEFE)
 
 @Composable
 fun TasksScreen(
@@ -45,11 +41,15 @@ fun TasksScreen(
             courses = courses,
             initialTitle = selectedTask?.title ?: "",
             initialDescription = selectedTask?.description ?: "",
-            initialCourseId = selectedTask?.courseId ?: courses.firstOrNull()?.courseId,
-            initialDueDate = selectedTask?.dueDate ?: System.currentTimeMillis(),
+            initialCourseId = selectedTask?.courseId
+                ?: courses.firstOrNull()?.courseId,
+            initialDueDate = selectedTask?.dueDate
+                ?: System.currentTimeMillis(),
             initialPriority = selectedTask?.priority ?: "MEDIUM",
             errorMessage = formError,
-            onInputChange = { viewModel.clearFormError() },
+            onInputChange = {
+                viewModel.clearFormError()
+            },
             onSave = { title, description, courseId, dueDate, priority ->
                 viewModel.saveTask(
                     existingTask = selectedTask,
@@ -81,13 +81,15 @@ fun TasksScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundPink)
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 22.dp, vertical = 20.dp)
     ) {
+
         Text(
             text = "Study.",
             fontSize = 34.sp,
-            color = DarkBurgundy,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold
         )
 
@@ -96,14 +98,14 @@ fun TasksScreen(
         Text(
             text = "Your assignments.",
             fontSize = 29.sp,
-            color = DarkBurgundy
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Text(
             text = "KEEP TRACK OF YOUR ACADEMIC WORK",
             fontSize = 10.sp,
             letterSpacing = 3.sp,
-            color = MutedRose
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -141,7 +143,7 @@ fun TasksScreen(
             Text(
                 text = "My tasks",
                 fontSize = 24.sp,
-                color = DarkBurgundy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium
             )
 
@@ -149,7 +151,7 @@ fun TasksScreen(
                 text = "${filteredTasks.size} ITEMS",
                 fontSize = 10.sp,
                 letterSpacing = 2.sp,
-                color = MutedRose
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -161,13 +163,17 @@ fun TasksScreen(
             listOf("All", "Active", "Completed").forEach { filter ->
                 FilterChip(
                     selected = selectedFilter == filter,
-                    onClick = { selectedFilter = filter },
-                    label = { Text(filter) },
+                    onClick = {
+                        selectedFilter = filter
+                    },
+                    label = {
+                        Text(filter)
+                    },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = DarkBurgundy,
-                        selectedLabelColor = Color.White,
-                        containerColor = CardWhite,
-                        labelColor = MutedRose
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
             }
@@ -179,28 +185,27 @@ fun TasksScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .height(180.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "No tasks here yet.",
-                    color = MutedRose,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 17.sp
                 )
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
+            Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(
-                    items = filteredTasks,
-                    key = { it.taskId }
-                ) { task ->
+                filteredTasks.forEach { task ->
                     TaskCard(
                         task = task,
                         onDetails = {
-                            val intent = Intent(context, TaskDetailActivity::class.java).apply {
+                            val intent = Intent(
+                                context,
+                                TaskDetailActivity::class.java
+                            ).apply {
                                 putExtra("EXTRA_TITLE", task.title)
                                 putExtra("EXTRA_COURSE", task.courseName)
                                 putExtra("EXTRA_DESC", task.description)
@@ -208,6 +213,7 @@ fun TasksScreen(
                                 putExtra("EXTRA_DUE_DATE", task.dueDate)
                                 putExtra("EXTRA_COMPLETED", task.isCompleted)
                             }
+
                             context.startActivity(intent)
                         },
                         onEdit = {
@@ -221,13 +227,15 @@ fun TasksScreen(
                         onToggleComplete = {
                             viewModel.toggleTaskCompletion(task)
                         },
-                        onShare = onShareTask?.let { share -> { share(task) } }
+                        onShare = onShareTask?.let { share ->
+                            { share(task) }
+                        }
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Button(
             onClick = {
@@ -244,42 +252,59 @@ fun TasksScreen(
                 .height(54.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = DarkBurgundy
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
             Text(
                 text = "+   Add new task",
-                fontSize = 16.sp,
-                color = Color.White
+                fontSize = 16.sp
             )
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
     }
 
     taskToDelete?.let { task ->
         AlertDialog(
-            onDismissRequest = { taskToDelete = null },
+            onDismissRequest = {
+                taskToDelete = null
+            },
             shape = RoundedCornerShape(20.dp),
-            containerColor = CardWhite,
-            title = { Text("Delete Task", color = DarkBurgundy) },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text(
+                    "Delete Task",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
             text = {
                 Text(
                     "Are you sure you want to delete \"${task.title}\"?",
-                    color = MutedRose
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteTask(task)
-                        taskToDelete = null
-                    }
-                ) {
-                    Text("Delete", color = DarkBurgundy)
+                TextButton(onClick = {
+                    viewModel.deleteTask(task)
+                    taskToDelete = null
+                }) {
+                    Text(
+                        "Delete",
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { taskToDelete = null }) {
-                    Text("Cancel", color = MutedRose)
+                TextButton(
+                    onClick = {
+                        taskToDelete = null
+                    }
+                ) {
+                    Text(
+                        "Cancel",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         )
@@ -287,19 +312,33 @@ fun TasksScreen(
 
     if (showNoCourseAlert) {
         AlertDialog(
-            onDismissRequest = { showNoCourseAlert = false },
+            onDismissRequest = {
+                showNoCourseAlert = false
+            },
             shape = RoundedCornerShape(20.dp),
-            containerColor = CardWhite,
-            title = { Text("No Courses Found", color = DarkBurgundy) },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text(
+                    "No Courses Found",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
             text = {
                 Text(
                     "Please add at least one course in the Courses screen before creating a task.",
-                    color = MutedRose
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showNoCourseAlert = false }) {
-                    Text("OK", color = DarkBurgundy)
+                TextButton(
+                    onClick = {
+                        showNoCourseAlert = false
+                    }
+                ) {
+                    Text(
+                        "OK",
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         )
@@ -316,7 +355,7 @@ private fun StatisticCard(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = CardWhite
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
@@ -326,7 +365,7 @@ private fun StatisticCard(
                 text = title,
                 fontSize = 9.sp,
                 letterSpacing = 1.sp,
-                color = MutedRose
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -334,7 +373,7 @@ private fun StatisticCard(
             Text(
                 text = value,
                 fontSize = 27.sp,
-                color = DarkBurgundy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -360,7 +399,7 @@ private fun TaskCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = CardWhite
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp
@@ -394,7 +433,7 @@ private fun TaskCard(
                     text = if (task.isCompleted) "COMPLETED" else "PENDING",
                     fontSize = 10.sp,
                     letterSpacing = 1.sp,
-                    color = MutedRose
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -403,7 +442,7 @@ private fun TaskCard(
             Text(
                 text = task.title,
                 fontSize = 20.sp,
-                color = DarkBurgundy,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium
             )
 
@@ -412,7 +451,7 @@ private fun TaskCard(
             Text(
                 text = task.courseName,
                 fontSize = 13.sp,
-                color = MutedRose
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             if (task.description.isNotBlank()) {
@@ -421,13 +460,15 @@ private fun TaskCard(
                 Text(
                     text = task.description,
                     fontSize = 13.sp,
-                    color = MutedRose
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            HorizontalDivider(color = BackgroundPink)
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -435,7 +476,7 @@ private fun TaskCard(
                 text = "DUE DATE",
                 fontSize = 9.sp,
                 letterSpacing = 2.sp,
-                color = MutedRose
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -446,7 +487,7 @@ private fun TaskCard(
                     Locale.getDefault()
                 ).format(Date(task.dueDate)),
                 fontSize = 14.sp,
-                color = DarkBurgundy
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -462,7 +503,7 @@ private fun TaskCard(
                 ) {
                     Text(
                         text = if (task.isCompleted) "Incomplete" else "Complete",
-                        color = DarkBurgundy
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -472,7 +513,10 @@ private fun TaskCard(
                             onClick = onShare,
                             contentPadding = PaddingValues(horizontal = 6.dp)
                         ) {
-                            Text("Share", color = DarkBurgundy)
+                            Text(
+                                "Share",
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
 
@@ -480,21 +524,30 @@ private fun TaskCard(
                         onClick = onDetails,
                         contentPadding = PaddingValues(horizontal = 6.dp)
                     ) {
-                        Text("Details", color = DarkBurgundy)
+                        Text(
+                            "Details",
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
 
                     TextButton(
                         onClick = onEdit,
                         contentPadding = PaddingValues(horizontal = 6.dp)
                     ) {
-                        Text("Edit", color = MutedRose)
+                        Text(
+                            "Edit",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     TextButton(
                         onClick = onDelete,
                         contentPadding = PaddingValues(horizontal = 6.dp)
                     ) {
-                        Text("Delete", color = Color(0xFFB65C70))
+                        Text(
+                            "Delete",
+                            color = Color(0xFFB65C70)
+                        )
                     }
                 }
             }

@@ -1,4 +1,3 @@
-
 package com.example.studymate.ui.courses
 
 import androidx.compose.foundation.background
@@ -10,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -18,13 +16,6 @@ import androidx.compose.ui.unit.sp
 import com.example.studymate.data.Course
 import com.example.studymate.data.Task
 import com.example.studymate.ui.theme.StudyMateTheme
-
-// Pink Editorial Color Palette - Same as Tasks Screen
-private val BackgroundPink = Color(0xFFFAF2F3)
-private val DarkBurgundy = Color(0xFF40232D)
-private val RosePink = Color(0xFFE99BAD)
-private val MutedRose = Color(0xFF967A83)
-private val CardWhite = Color(0xFFFFFEFE)
 
 @Composable
 fun CoursesScreen(
@@ -38,13 +29,13 @@ fun CoursesScreen(
     var selectedCourse by remember { mutableStateOf<Course?>(null) }
     var courseToDelete by remember { mutableStateOf<Course?>(null) }
 
-    val primary = DarkBurgundy
-    val muted = MutedRose
+    val primary = MaterialTheme.colorScheme.onSurface
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundPink)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 22.dp, vertical = 20.dp)
     ) {
         Text(
@@ -114,7 +105,7 @@ fun CoursesScreen(
 
                         val tasks by remember(course.courseId) {
                             viewModel.tasksForCourse(course.courseId)
-                        }.collectAsState(initial = emptyList<Task>())
+                        }.collectAsState(initial = emptyList())
 
                         CourseCard(
                             course = course,
@@ -146,8 +137,8 @@ fun CoursesScreen(
                 .height(54.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = DarkBurgundy,
-                contentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
             Text(
@@ -184,17 +175,17 @@ fun CoursesScreen(
                 courseToDelete = null
             },
             shape = RoundedCornerShape(20.dp),
-            containerColor = CardWhite,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
                     "Delete Course",
-                    color = DarkBurgundy
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
                 Text(
                     "Are you sure you want to delete ${course.courseName}?",
-                    color = MutedRose
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             confirmButton = {
@@ -204,7 +195,10 @@ fun CoursesScreen(
                         courseToDelete = null
                     }
                 ) {
-                    Text("Delete", color = DarkBurgundy)
+                    Text(
+                        "Delete",
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             },
             dismissButton = {
@@ -213,7 +207,10 @@ fun CoursesScreen(
                         courseToDelete = null
                     }
                 ) {
-                    Text("Cancel", color = MutedRose)
+                    Text(
+                        "Cancel",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         )
@@ -225,17 +222,17 @@ fun CoursesScreen(
                 viewModel.clearDeleteError()
             },
             shape = RoundedCornerShape(20.dp),
-            containerColor = CardWhite,
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text(
                     "Cannot Delete Course",
-                    color = DarkBurgundy
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
                 Text(
                     error,
-                    color = MutedRose
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             confirmButton = {
@@ -244,7 +241,10 @@ fun CoursesScreen(
                         viewModel.clearDeleteError()
                     }
                 ) {
-                    Text("OK", color = DarkBurgundy)
+                    Text(
+                        "OK",
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         )
@@ -264,7 +264,7 @@ private fun CourseCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = CardWhite
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp
@@ -277,7 +277,7 @@ private fun CourseCard(
                 text = course.courseName,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Medium,
-                color = DarkBurgundy
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(Modifier.height(5.dp))
@@ -286,7 +286,7 @@ private fun CourseCard(
                 text = course.courseCode.uppercase(),
                 fontSize = 11.sp,
                 letterSpacing = 1.5.sp,
-                color = MutedRose
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.height(10.dp))
@@ -298,14 +298,14 @@ private fun CourseCard(
                     "${tasks.size} tasks · $completed completed"
                 },
                 fontSize = 12.sp,
-                color = MutedRose
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             tasks.take(3).forEach { task ->
                 Text(
                     text = (if (task.isCompleted) "✓ " else "• ") + task.title,
                     fontSize = 13.sp,
-                    color = DarkBurgundy
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -313,13 +313,15 @@ private fun CourseCard(
                 Text(
                     text = "+ ${tasks.size - 3} more",
                     fontSize = 12.sp,
-                    color = MutedRose
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(Modifier.height(14.dp))
 
-            HorizontalDivider(color = BackgroundPink)
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
 
             Spacer(Modifier.height(10.dp))
 
@@ -330,7 +332,7 @@ private fun CourseCard(
                     onClick = onEdit,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = DarkBurgundy
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text("Edit")
@@ -340,8 +342,8 @@ private fun CourseCard(
                     onClick = onDelete,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = DarkBurgundy,
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text("Delete")
@@ -354,10 +356,11 @@ private fun CourseCard(
 @Preview(showBackground = true)
 @Composable
 private fun CourseCardPreview() {
-    StudyMateTheme {
+    StudyMateTheme(dynamicColor = false) {
         Column(
             modifier = Modifier
-                .background(BackgroundPink)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {

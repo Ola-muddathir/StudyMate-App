@@ -1,4 +1,6 @@
+
 package com.example.studymate.data
+
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -15,8 +17,8 @@ interface TaskDao {
     @Update
     suspend fun updateTask(task: Task)
 
-    @Delete
-    suspend fun deleteTask(task: Task)
+    @Query("DELETE FROM tasks WHERE taskId = :taskId")
+    suspend fun deleteTaskById(taskId: Int): Int
 
     @Query("SELECT * FROM tasks ORDER BY dueDate ASC")
     fun getAllTasks(): Flow<List<Task>>
@@ -27,7 +29,6 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE taskId = :taskId")
     suspend fun getTaskById(taskId: Int): Task?
 
-    //Used to block deleting a course that has tasks
     @Query("SELECT COUNT(*) FROM tasks WHERE courseId = :courseId")
     suspend fun countTasksByCourse(courseId: Int): Int
 }

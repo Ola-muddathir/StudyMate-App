@@ -1,3 +1,4 @@
+
 package com.example.studymate.ui.tasks
 
 import androidx.lifecycle.ViewModel
@@ -55,14 +56,18 @@ class TaskViewModel(
         taskDao.getAllTasks(),
         courseDao.getAllCourses()
     ) { taskList, courseList ->
+
         val courseMap = courseList.associateBy { it.courseId }
+
         taskList.map { task ->
             val course = courseMap[task.courseId]
+
             val displayCourse = if (course != null) {
                 "${course.courseCode.uppercase()} · ${course.courseName}"
             } else {
                 "Unknown Course"
             }
+
             TaskUiModel(
                 taskId = task.taskId,
                 title = task.title,
@@ -101,10 +106,14 @@ class TaskViewModel(
                 _formError.value = "Please enter a task title."
                 return
             }
-            courseId == null || courses.value.none { it.courseId == courseId } -> {
+
+            courseId == null || courses.value.none {
+                it.courseId == courseId
+            } -> {
                 _formError.value = "Please select a valid course."
                 return
             }
+
             !Priority.isValid(priority) -> {
                 _formError.value = "Please select a valid priority."
                 return
@@ -114,42 +123,63 @@ class TaskViewModel(
         _formError.value = null
 
         viewModelScope.launch {
-            if (existingTask == null) {
-                taskDao.insertTask(
-                    Task(
-                        title = cleanTitle,
-                        description = cleanDescription,
-                        courseId = courseId,
-                        dueDate = dueDate,
-                        priority = priority
+            try {
+                if (existingTask == null) {
+                    taskDao.insertTask(
+                        Task(
+                            title = cleanTitle,
+                            description = cleanDescription,
+                            courseId = courseId,
+                            dueDate = dueDate,
+                            priority = priority
+                        )
                     )
-                )
-            } else {
-                taskDao.updateTask(
-                    existingTask.toEntity().copy(
-                        title = cleanTitle,
-                        description = cleanDescription,
-                        courseId = courseId,
-                        dueDate = dueDate,
-                        priority = priority
+                } else {
+                    taskDao.updateTask(
+                        existingTask.toEntity().copy(
+                            title = cleanTitle,
+                            description = cleanDescription,
+                            courseId = courseId,
+                            dueDate = dueDate,
+                            priority = priority
+                        )
                     )
-                )
+                }
+
+                onSuccess()
+            } catch (e: Exception) {
+                android.util.Log.e("TaskViewModel", "Save failed", e)
             }
-            onSuccess()
         }
     }
 
     fun toggleTaskCompletion(task: TaskUiModel) {
         viewModelScope.launch {
             taskDao.updateTask(
-                task.toEntity().copy(isCompleted = !task.isCompleted)
+                task.toEntity().copy(
+                    isCompleted = !task.isCompleted
+                )
             )
         }
     }
 
+    // Delete task using its ID
     fun deleteTask(task: TaskUiModel) {
         viewModelScope.launch {
-            taskDao.deleteTask(task.toEntity())
+            try {
+                val deletedRows = taskDao.deleteTaskById(task.taskId)
+
+                android.util.Log.d(
+                    "TaskDelete",
+                    "Deleted rows: $deletedRows, Task ID: ${task.taskId}"
+                )
+            } catch (e: Exception) {
+                android.util.Log.e(
+                    "TaskDelete",
+                    "Delete failed",
+                    e
+                )
+            }
         }
     }
 
@@ -162,6 +192,7 @@ class TaskViewModelFactory(
     private val taskDao: TaskDao,
     private val courseDao: CourseDao
 ) : ViewModelProvider.Factory {
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return TaskViewModel(taskDao, courseDao) as T
